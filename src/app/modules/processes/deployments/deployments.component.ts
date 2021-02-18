@@ -31,6 +31,8 @@ import {DialogsService} from '../../../core/services/dialogs.service';
 import {DeploymentsMissingDependenciesDialogComponent} from './dialogs/deployments-missing-dependencies-dialog.component';
 import {FormArray, FormBuilder, FormControl, FormGroup} from '@angular/forms';
 import {MatSnackBar} from '@angular/material/snack-bar';
+import {CamundaVariable} from './shared/deployments-definition.model';
+import {DeploymentsStartParameterDialogComponent} from './dialogs/deployments-start-parameter-dialog.component';
 
 const grids = new Map([
     ['xs', 1],
@@ -48,7 +50,6 @@ const grids = new Map([
 
 export class ProcessDeploymentsComponent implements OnInit, OnDestroy {
     formGroup: FormGroup = new FormGroup({repoItems: new FormArray([])});
-    filterControl = new FormGroup({generated: new FormControl(false)});
     gridCols = 0;
     sortAttributes = [new SortModel('Date', 'deploymentTime', 'desc'), new SortModel('Name', 'name', 'asc')];
     ready = false;
@@ -62,6 +63,7 @@ export class ProcessDeploymentsComponent implements OnInit, OnDestroy {
     private getAllSub = new Subscription();
     private allDataLoaded = false;
     private source = 'sepl';
+    showGenerated = false;
     selectedItems: DeploymentsModel[] = [];
 
     constructor(private sanitizer: DomSanitizer,
@@ -78,7 +80,7 @@ export class ProcessDeploymentsComponent implements OnInit, OnDestroy {
     }
 
     ngOnInit() {
-        this.initFilter();
+        this.filterItems(this.showGenerated);
         this.initGridCols();
         this.initSearchAndGetDevices();
     }
@@ -100,14 +102,30 @@ export class ProcessDeploymentsComponent implements OnInit, OnDestroy {
         this.getRepoItems(true);
     }
 
-    run(definitionId: string): void {
-        this.deploymentsService.startDeployment(definitionId).subscribe((resp) => {
-            if (resp === null) {
-                this.snackBar.open('Error while starting the deployment!', undefined, {duration: 2000});
+    run(deploymentId: string): void {
+        this.deploymentsService.getDeploymentInputParameters(deploymentId).subscribe((parameter) => {
+            if (parameter && parameter.size) {
+                this.openStartWithParameterDialog(deploymentId, parameter);
             } else {
-                this.snackBar.open('Deployment started successfully.', undefined, {duration: 2000});
+                this.deploymentsService.startDeployment(deploymentId).subscribe((resp) => {
+                    if (resp === null) {
+                        this.snackBar.open('Error while starting the deployment!', undefined, {duration: 2000});
+                    } else {
+                        this.snackBar.open('Deployment started successfully.', undefined, {duration: 2000});
+                    }
+                });
             }
         });
+    }
+
+    openStartWithParameterDialog(deploymentId: string, parameter: Map<string, CamundaVariable>): void {
+        const dialogConfig = new MatDialogConfig();
+        dialogConfig.autoFocus = true;
+        dialogConfig.data = {
+            deploymentId: deploymentId,
+            parameter: parameter
+        };
+        this.dialog.open(DeploymentsStartParameterDialogComponent, dialogConfig);
     }
 
     copyEndpoint(id: string) {
@@ -122,7 +140,7 @@ export class ProcessDeploymentsComponent implements OnInit, OnDestroy {
     deleteDeployment(deployment: DeploymentsModel): void {
         this.dialogsService.openDeleteDialog('deployment ' + deployment.name).afterClosed().subscribe((deleteDeployment: boolean) => {
             if (deleteDeployment) {
-                this.deploymentsService.deleteDeployment(deployment.id).subscribe((resp: { status: number }) => {
+                this.deploymentsService.v2deleteDeployment(deployment.id).subscribe((resp: { status: number }) => {
                     if (resp.status === 200) {
                         this.repoItems.removeAt(this.repoItems.value.findIndex((item: DeploymentsModel) => deployment.id === item.id));
                         this.deploymentsService.checkForDeletedDeploymentWithRetries(deployment.id, 10, 100).subscribe((exists: boolean) => {
@@ -152,7 +170,12 @@ export class ProcessDeploymentsComponent implements OnInit, OnDestroy {
     }
 
     copyDeployment(deploymentId: string): void {
-        this.router.navigateByUrl('/processes/deployments/config', {state: {processId: '', deploymentId: deploymentId}});
+        this.router.navigateByUrl('/processes/deployments/config', {
+            state: {
+                processId: '',
+                deploymentId: deploymentId
+            }
+        });
     }
 
     countCheckboxes(): void {
@@ -167,8 +190,8 @@ export class ProcessDeploymentsComponent implements OnInit, OnDestroy {
                 this.ready = false;
                 const array: Observable<boolean>[] = [];
                 this.selectedItems.forEach((item: DeploymentsModel) => {
-                    array.push(this.deploymentsService.checkForDeletedDeploymentWithRetries (item.id, 15, 200));
-                    this.deploymentsService.deleteDeployment(item.id).subscribe((resp: { status: number }) => {
+                    array.push(this.deploymentsService.checkForDeletedDeploymentWithRetries(item.id, 15, 200));
+                    this.deploymentsService.v2deleteDeployment(item.id).subscribe((resp: { status: number }) => {
                         if (resp.status !== 200) {
                             this.showSnackBarError(this.selectedItems.length === 1 ? 'deleting the deployment!' : 'deleting the deployments!');
                         }
@@ -176,13 +199,13 @@ export class ProcessDeploymentsComponent implements OnInit, OnDestroy {
                 });
 
                 forkJoin(array).subscribe((resp: boolean[]) => {
-                    const error = resp.some((item: boolean) => item === true);
+                        const error = resp.some((item: boolean) => item === true);
                         if (error) {
                             this.showSnackBarError(this.selectedItems.length === 1 ? 'deleting the deployment!' : 'deleting the deployments!');
                         } else {
                             this.showSnackBarSuccess(this.selectedItems.length === 1 ? 'Deployment deleted' : 'Deployments deleted');
                         }
-                    this.getRepoItems(true);
+                        this.getRepoItems(true);
                     }
                 );
 
@@ -197,15 +220,15 @@ export class ProcessDeploymentsComponent implements OnInit, OnDestroy {
         });
     }
 
-    private initFilter(): void {
-        (this.filterControl.get('generated') as FormControl).valueChanges.subscribe((resp: boolean) => {
-            if (resp) {
-                this.source = '';
-            } else {
-                this.source = 'sepl';
-            }
-            this.getRepoItems(true);
-        });
+    filterItems(show: boolean): void {
+        this.showGenerated = show;
+
+        if (this.showGenerated) {
+            this.source = '';
+        } else {
+            this.source = 'sepl';
+        }
+        this.getRepoItems(true);
     }
 
     private initSearchAndGetDevices() {

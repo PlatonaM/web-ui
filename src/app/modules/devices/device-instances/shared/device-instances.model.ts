@@ -17,9 +17,10 @@
 import {
     DeviceTypePermSearchModel,
     PermissionsModel
-} from '../../device-types-overview/shared/device-type-perm-search.model';
-import {DeviceInstancesUpdateModel} from './device-instances-update.model';
-import {DeviceTypeServiceModel} from '../../device-types-overview/shared/device-type.model';
+} from '../../../metadata/device-types-overview/shared/device-type-perm-search.model';
+import {DeviceTypeServiceModel} from '../../../metadata/device-types-overview/shared/device-type.model';
+import {ImportInstancesModel} from "../../../imports/import-instances/shared/import-instances.model";
+import {ImportTypeModel} from "../../../imports/import-types/shared/import-types.model";
 
 export interface DeviceInstancesBaseModel {
     id: string;
@@ -51,4 +52,31 @@ export interface DeviceFilterCriteriaModel {
 export interface DeviceSelectablesModel {
     device: DeviceInstancesPermSearchModel;
     services: DeviceTypeServiceModel[];
+}
+
+export interface DeviceSelectablesWithGroupsModel {
+    device?: DeviceInstancesPermSearchModel;
+    services?: DeviceTypeServiceModel[];
+    device_group?: {
+        id: string;
+        name: string;
+    };
+}
+
+export interface DeviceSelectablesWithImportsModel {
+    device?: DeviceInstancesPermSearchModel;
+    services?: DeviceTypeServiceModel[];
+    import?: ImportInstancesModel;
+    importType?: ImportTypeModel;
+}
+
+export interface DeviceSelectablesWithGroupsAndImportsModel {
+    device?: DeviceInstancesPermSearchModel;
+    services?: DeviceTypeServiceModel[];
+    import?: ImportInstancesModel;
+    importType?: ImportTypeModel;
+    device_group?: {
+        id: string;
+        name: string;
+    };
 }

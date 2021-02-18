@@ -24,13 +24,13 @@ import {WidgetModel} from '../../../modules/dashboard/shared/dashboard-widget.mo
 import {of} from 'rxjs';
 import {DashboardService} from '../../../modules/dashboard/shared/dashboard.service';
 import {FormArray, ReactiveFormsModule} from '@angular/forms';
-import {DeviceTypeInteractionEnum} from '../../../modules/devices/device-types-overview/shared/device-type.model';
+import {DeviceTypeInteractionEnum} from '../../../modules/metadata/device-types-overview/shared/device-type.model';
 import {DeploymentsService} from '../../../modules/processes/deployments/shared/deployments.service';
 import {MatIconModule} from '@angular/material/icon';
 import {MatExpansionModule} from '@angular/material/expansion';
 import {MatInputModule} from '@angular/material/input';
-import {ExportService} from '../../../modules/data/export/shared/export.service';
-import {ExportModel} from '../../../modules/data/export/shared/export.model';
+import {ExportService} from '../../../modules/exports/shared/export.service';
+import {ExportModel} from '../../../modules/exports/shared/export.model';
 import {util} from 'jointjs';
 import {createSpyFromClass, Spy} from 'jasmine-auto-spies';
 import {environment} from '../../../../environments/environment';
@@ -99,8 +99,9 @@ describe('DataTableEditDialogComponent', () => {
             TimePath: 'struct.path',
         } as ExportModel;
         exportServiceSpy.prepareDeviceServiceExport.and.returnValue([exampleExport]);
+        exportServiceSpy.getExportTags.and.returnValue(of({}));
 
-        deploymentsServiceSpy.postDeployments.and.returnValue(of({status: 200, id: uuid()}));
+        deploymentsServiceSpy.v2postDeployments.and.returnValue(of({status: 200, id: uuid()}));
         deploymentsServiceSpy.v2getPreparedDeploymentsByXml.and.returnValue(of({
             id: '0',
             name: 'unknown',
@@ -136,6 +137,8 @@ describe('DataTableEditDialogComponent', () => {
         }]));
         dataTableHelperServiceSpy.getOperator.and.returnValue({outputs: [{name: 'opValueName', type: 'string'}]});
         dataTableHelperServiceSpy.getServiceValues.and.returnValue([]);
+        dataTableHelperServiceSpy.preloadExportTags.and.returnValue(of(new Map()));
+        dataTableHelperServiceSpy.getExportTags.and.returnValue(of(new Map()));
 
 
         processSchedulerServiceSpy.createSchedule.and.returnValue(of(null));
@@ -284,6 +287,7 @@ describe('DataTableEditDialogComponent', () => {
                         order: DataTableOrderEnum.TimeAsc,
                         valueAlias: 'alias',
                         refreshTime: 10,
+                        valuesPerElement: 1,
                         elements: [
                             {
                                 id: 'known-test-id',
@@ -293,6 +297,7 @@ describe('DataTableEditDialogComponent', () => {
                                 exportValuePath: 'struct.Time',
                                 exportValueName: 'Time',
                                 exportCreatedByWidget: true,
+                                exportTagSelection: null,
                                 unit: null,
                                 elementDetails: {
                                     elementType: 0,

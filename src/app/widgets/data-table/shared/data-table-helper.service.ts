@@ -15,19 +15,23 @@
  */
 
 import {Injectable} from '@angular/core';
-import {ExportService} from '../../../modules/data/export/shared/export.service';
-import {DeviceTypeService} from '../../../modules/devices/device-types-overview/shared/device-type.service';
+import {ExportService} from '../../../modules/exports/shared/export.service';
+import {DeviceTypeService} from '../../../modules/metadata/device-types-overview/shared/device-type.service';
 import {DeviceInstancesService} from '../../../modules/devices/device-instances/shared/device-instances.service';
 import {
     DeviceTypeAspectModel,
     DeviceTypeFunctionModel,
     DeviceTypeModel,
     DeviceTypeServiceModel
-} from '../../../modules/devices/device-types-overview/shared/device-type.model';
+} from '../../../modules/metadata/device-types-overview/shared/device-type.model';
 import {DeviceSelectablesModel} from '../../../modules/devices/device-instances/shared/device-instances.model';
 import {forkJoin, Observable, of} from 'rxjs';
 import {map} from 'rxjs/operators';
-import {ExportModel, ExportValueCharacteristicModel} from '../../../modules/data/export/shared/export.model';
+import {
+    ExportModel,
+    ExportResponseModel,
+    ExportValueCharacteristicModel
+} from '../../../modules/exports/shared/export.model';
 import {PipelineRegistryService} from '../../../modules/data/pipeline-registry/shared/pipeline-registry.service';
 import {PipelineModel} from '../../../modules/data/pipeline-registry/shared/pipeline.model';
 import {OperatorModel} from '../../../modules/data/operator-repo/shared/operator.model';
@@ -41,6 +45,7 @@ export class DataTableHelperService {
 
 
     exportCache: ExportModel[] | undefined = undefined;
+    exportTagCache: Map<string, Map<string, { value: string, parent: string }[]>> | undefined = undefined;
     pipelineCache: PipelineModel[] | undefined = undefined;
     deviceTypeCache = new Map<String, DeviceTypeModel>();
     deviceInstancesCache = new Map<String, DeviceSelectablesModel[]>();
@@ -76,6 +81,7 @@ export class DataTableHelperService {
 
     initialize(): Observable<null> {
         this.exportCache = undefined;
+        this.exportTagCache = new Map<string, Map<string, { value: string, parent: string }[]>>();
         this.pipelineCache = undefined;
         this.deviceTypeCache = new Map<String, DeviceTypeModel>();
         this.deviceInstancesCache = new Map<String, DeviceSelectablesModel[]>();
@@ -139,7 +145,7 @@ export class DataTableHelperService {
             return of(this.exportCache);
         }
         return this.exportService.getExports('', -1, 0, 'name', 'asc')
-            .pipe(map(exports => this.exportCache = exports === null ? [] : exports));
+            .pipe(map(exports => this.exportCache = exports === null ? [] : exports.instances));
     }
 
     getExportsForDeviceAndValue(serviceId: string, deviceId: string, path: string): ExportModel[] {
@@ -216,6 +222,25 @@ export class DataTableHelperService {
         });
         this.serviceExportValueCache.set(key, collection);
         return collection;
+    }
+
+    preloadExportTags(exportId: string): Observable<Map<string, { value: string, parent: string }[]>> {
+        if (this.exportTagCache?.get(exportId) !== undefined) {
+            return of(this.getExportTags(exportId));
+        }
+        this.exportTagCache?.set(exportId, new Map());
+        return this.exportService.getExportTags(exportId).pipe(map(res => {
+            const m = new Map<string, { value: string, parent: string }[]>();
+            res.forEach((v, k) => m.set(k, v.map(t => {
+                return {value: t, parent: k};
+            })));
+            this.exportTagCache?.set(exportId, m);
+            return m;
+        }));
+    }
+
+    getExportTags(exportId: string): Map<string, { value: string, parent: string }[]> {
+        return this.exportTagCache?.get(exportId) || new Map();
     }
 }
 

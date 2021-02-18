@@ -96,7 +96,11 @@ export class ChartsExportService {
             const array: ChartsExportRequestPayloadQueriesModel[] = [];
             widgetProperties.vAxes.forEach((vAxis: ChartsExportVAxesModel) => {
 
-                const newField: ChartsExportRequestPayloadQueriesFieldsModel = {name: vAxis.valueName, math: vAxis.math, filterType: vAxis.filterType};
+                const newField: ChartsExportRequestPayloadQueriesFieldsModel = {
+                    name: vAxis.valueName,
+                    math: vAxis.math,
+                    filterType: vAxis.filterType
+                };
                 newField.filterValue = vAxis.valueType === 'string' ? vAxis.filterValue : Number(vAxis.filterValue);
 
                 if (this.canAppendField(array, vAxis, newField)) {
@@ -109,7 +113,7 @@ export class ChartsExportService {
             requestPayload.queries = array;
         }
 
-        return this.http.post<ChartsExportModel>((environment.influxAPIURL + '/queries'), requestPayload).pipe(
+        return this.http.post<ChartsExportModel>((environment.influxAPIURL + '/queries?include_empty_columns=false'), requestPayload).pipe(
             catchError(this.errorHandlerService.handleError(DeploymentsService.name, 'getData', {error: 'error'}))
         );
     }
@@ -151,31 +155,40 @@ export class ChartsExportService {
             array[array.length - 1].fields
                 .forEach(field => hasFilteredField =
                     (field.filterValue === undefined || field.filterValue === null || isNaN(<number>appender.filterValue))
-                    && (field.filterType === undefined  ||  field.filterType === null) ?
-                    hasFilteredField : true);
+                    && (field.filterType === undefined || field.filterType === null) ?
+                        hasFilteredField : true);
             return !hasFilteredField;
         }
         return false;
     }
 
     private setData(series: ChartsExportColumnsModel, vAxes: ChartsExportVAxesModel[]): ChartDataTableModel {
-        const indices: { index: number, math: string }[] = [];
+        const indices: { index: number, math: string, conversions: { from: string, to: number }[],
+            conversionDefault?: number, type: string}[] = [];
         const header: string[] = ['time'];
         if (vAxes) {
             vAxes.forEach((vAxis: ChartsExportVAxesModel) => {
                 const index = series.columns.indexOf(vAxis.instanceId + '.' + vAxis.valueName + vAxis.math.trim() + (vAxis.filterType || '') + (vAxis.filterValue || ''));
                 if (index !== -1) {
-                    indices.push({index: index, math: vAxis.math});
+                    indices.push({index: index, math: vAxis.math, conversions: vAxis.conversions || [],
+                        conversionDefault: vAxis.conversionDefault, type: vAxis.valueType});
                     header.push(vAxis.valueAlias || vAxis.valueName);
                 }
             });
         }
         const dataTable = new ChartDataTableModel([header]);
 
-        series.values.forEach((item: (string | number)[]) => {
+        series.values.forEach((item: (string | number | boolean)[]) => {
                 const dataPoint: (Date | number) [] = [new Date(<string>item[0])];
-                indices.forEach((resp: { index: number, math: string }) => {
-                    dataPoint.push(<number>item[resp.index]);
+                indices.forEach(resp => {
+                    let value = item[resp.index];
+                    const matchingRule = resp.conversions.find(rule => rule.from === value);
+                    if (matchingRule !== undefined) {
+                        value = matchingRule.to;
+                    } else if (resp.type === 'string' && resp.conversionDefault !== undefined) {
+                        value = resp.conversionDefault;
+                    }
+                    dataPoint.push(value as number);
                 });
                 dataTable.data.push(dataPoint);
             }
@@ -200,28 +213,57 @@ export class ChartsExportService {
                 colors.splice(deleteColorIndices[i], 1);
             }
         }
-        return new ChartsModel(
+        const chartModel = new ChartsModel(
             (widget.properties.chartType === undefined || widget.properties.chartType === '') ? 'LineChart' : widget.properties.chartType,
             dataTable.data,
             {
                 chartArea: {width: element.widthPercentage, height: element.heightPercentage},
                 colors,
-                hAxis: {title: widget.properties.hAxisLabel, gridlines: {count: -1}},
+                hAxis: {
+                    title: widget.properties.hAxisLabel,
+                    gridlines: {count: -1},
+                    format: widget.properties.hAxisFormat,
+                    ticks: widget.properties.chartType === 'ColumnChart' ? dataTable.data.slice(1).map(x => x[0] as Date) : undefined,
+                },
                 height: element.height,
                 width: element.width,
                 legend: 'none',
                 curveType: widget.properties.curvedFunction ? 'function' : '',
                 vAxis: {
-                    title: widget.properties.vAxisLabel,
-                    viewWindowMode: element.height > 200 ? 'pretty' : 'maximized',
+                    viewWindowMode: widget.properties.chartType !== 'ColumnChart' ?
+                        (element.height > 200 ? 'pretty' : 'maximized') : undefined,
+                    viewWindow: {},
+                },
+                vAxes: {
+                    0: {title: widget.properties.vAxisLabel},
                 },
                 explorer: {
                     actions: ['dragToZoom', 'rightClickToReset'],
                     axis: 'horizontal',
                     keepInBounds: true,
-                    maxZoomIn: 0.001},
+                    maxZoomIn: 0.001
+                },
                 interpolateNulls: true,
             });
+        if (widget.properties.chartType === 'ColumnChart'
+            && dataTable.data.slice(1).findIndex(column => column.slice(1).findIndex(val => val < 0) !== -1) === -1 // all values >= 0 ?
+            && chartModel.options?.vAxis?.viewWindow !== undefined) {
+
+            chartModel.options.vAxis.viewWindow.min = 0;
+        }
+        const firstAxesSeries: number[] = [];
+        const secondAxisSeries: number[] = [];
+        widget.properties.vAxes?.forEach((v, idx) => v.displayOnSecondVAxis === true ?
+            secondAxisSeries.push(idx) : firstAxesSeries.push(idx));
+        if (chartModel.options?.vAxes !== undefined && secondAxisSeries.length > 0) {
+            chartModel.options.vAxes['1'] = {title: widget.properties.secondVAxisLabel};
+            chartModel.options.series = {};
+            // tslint:disable-next-line:no-non-null-assertion
+            firstAxesSeries.forEach(i => chartModel.options!.series[i] = {targetAxisIndex: 0});
+            // tslint:disable-next-line:no-non-null-assertion
+            secondAxisSeries.forEach(i => chartModel.options!.series[i] = {targetAxisIndex: 1});
+        }
+        return chartModel;
     }
 
     private getColorArray(vAxes: ChartsExportVAxesModel[]): string[] {

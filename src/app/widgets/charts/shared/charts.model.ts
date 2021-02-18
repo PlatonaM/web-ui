@@ -51,6 +51,7 @@ export class ChartsModel {
                 gridlines?: {
                     count?: number
                 }
+                ticks?: (Date | string | number)[];
             }
             colors?: string[];
             interpolateNulls?: boolean;
@@ -59,6 +60,11 @@ export class ChartsModel {
                 axis?: string;
                 keepInBounds?: boolean;
                 maxZoomIn?: number;
+            },
+            series?: any; // int to {targetAxisIndex: int}
+            vAxes?: {
+                0?: {title?: string};
+                1?: {title?: string};
             }
         }
     ) {

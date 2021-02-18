@@ -19,7 +19,8 @@
     <mat-tab-group backgroundColor="accent" color="primary" dynamicHeight="true"
                    (selectedIndexChange)="setIndex($event)"
                    (animationDone)="animation()">
-        <mat-tab label="{{tab}}" *ngFor="let tab of ['All', 'Own', 'Marketplace', 'Shared']">
+        <!-- <mat-tab label="{{tab}}" *ngFor="let tab of ['All', 'Own', 'Marketplace', 'Shared']"> -->
+        <mat-tab label="{{tab}}" *ngFor="let tab of ['All', 'Own', 'Shared']">
             <senergy-searchbar fxFlex [searchTextIn]="searchText"></senergy-searchbar>
             <div fxLayout="row">
                 <div fxFlex></div>
@@ -55,15 +56,20 @@
                                         {{item.value.date | date:"medium"}}
                                     </div>
                                     <div fxLayout="row" fxLayoutAlign="center center" class="footer-buttons">
+                                        <mat-checkbox formControlName="selected" (change)="countCheckboxes()">
+                                        </mat-checkbox>
                                         <mat-icon matTooltip="Process is shared" *ngIf="item.value.shared"
                                                   class="color-sidenav info-icon">share
                                         </mat-icon>
-                                        <mat-checkbox formControlName="selected" (change)="countCheckboxes()">
-                                        </mat-checkbox>
                                         <div fxFlex></div>
                                         <button mat-icon-button color="accent" matTooltip="Edit"
                                                 routerLink="/processes/designer/{{item.value.id}}">
                                             <mat-icon>edit</mat-icon>
+                                        </button>
+                                        <button mat-icon-button matTooltip="Deploy" color="accent"
+                                                (click)="deployProcess(item.value.id)"
+                                                [disabled]="item.value.permissions.x === false">
+                                            <mat-icon>publish</mat-icon>
                                         </button>
                                         <button mat-icon-button matTooltip="Delete" color="accent"
                                                 (click)="deleteProcess(item.value)"
@@ -93,11 +99,6 @@
                                             <button mat-menu-item (click)="downloadSvg(item.value)">
                                                 <mat-icon>insert_photo</mat-icon>
                                                 <span>Download SVG</span>
-                                            </button>
-                                            <button mat-menu-item (click)="deployProcess(item.value.id)"
-                                                    [disabled]="item.value.permissions.x === false">
-                                                <mat-icon>publish</mat-icon>
-                                                <span>Deploy</span>
                                             </button>
                                         </mat-menu>
                                     </div>

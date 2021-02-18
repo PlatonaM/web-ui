@@ -24,6 +24,7 @@ export interface DataTablePropertiesModel {
     valueAlias: string;
     refreshTime: number;
     convertRules: DataTableConfigConvertRuleModel[];
+    valuesPerElement?: number;
 }
 
 export interface DataTableConfigConvertRuleModel {
@@ -41,6 +42,7 @@ export interface DataTableElementModel {
     exportValuePath: string;
     exportValueName: string;
     exportCreatedByWidget: boolean;
+    exportTagSelection?: string[];
     unit?: string;
     warning?: DataTableElementWarningModel;
     elementDetails: {

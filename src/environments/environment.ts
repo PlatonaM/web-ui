@@ -52,10 +52,12 @@ export const environment = {
     yrUrl: 'http://localhost',
     notificationsUrl: 'http://localhost',
     configurablesUrl: 'http://localhost',
+    marshallerUrl: 'http://localhost',
     /** Semantic Keys **/
     timeStampCharacteristicId: 'urn:infai:ses:characteristic:xxxxxx-xxxx-xxxxx-xxxx',
     timeStampCharacteristicUnixSecondsId: 'urn:infai:ses:characteristic:xxxxxx-xxxx-xxxxx-xxxx',
     timeStampCharacteristicUnixNanoSecondsId: 'urn:infai:ses:characteristic:xxxxxx-xxxx-xxxxx-xxxx',
+    timeStampCharacteristicUnixMilliSecondsId: 'urn:infai:ses:characteristic:xxxxxx-xxxx-xxxxx-xxxx',
     mqttProtocolID: 'urn:infai:ses:protocol:xx-xxxx-xxxx-xxxx-xxxxx',
     getPm1FunctionId: 'urn:infai:ses:measuring-function:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
     getPm10FunctionId: 'urn:infai:ses:measuring-function:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
@@ -65,6 +67,11 @@ export const environment = {
     getPressureFunctionId: 'urn:infai:ses:measuring-function:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
     getCo2FunctionId: 'urn:infai:ses:measuring-function:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
     aspectAirId: 'urn:infai:ses:aspect:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+    importRepoUrl: 'http://localhost',
+    importDeployUrl: 'http://localhost',
+    importTypeIdUbaStation: 'urn:infai:ses:import-type:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+    importTypeIdDwdPollen: 'urn:infai:ses:import-type:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+    importTypeIdYrForecast: 'urn:infai:ses:import-type:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
 };
 
 /*

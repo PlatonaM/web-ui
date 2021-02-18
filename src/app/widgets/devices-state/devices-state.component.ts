@@ -18,12 +18,15 @@ import {Component, Input, OnDestroy, OnInit} from '@angular/core';
 import {
     WidgetModel
 } from '../../modules/dashboard/shared/dashboard-widget.model';
-import {MatIconRegistry} from '@angular/material/icon';
-import {DomSanitizer} from '@angular/platform-browser';
 import {DevicesStateService} from './shared/devices-state.service';
 import {DevicesStateModel} from './shared/devices-state.model';
 import {DashboardService} from '../../modules/dashboard/shared/dashboard.service';
 import {Subscription} from 'rxjs';
+import {
+    DeviceInstancesRouterState,
+    DeviceInstancesRouterStateTypesEnum, DeviceInstancesRouterStateTabEnum
+} from '../../modules/devices/device-instances/device-instances.component';
+import {Router} from '@angular/router';
 
 @Component({
     selector: 'senergy-devices-state',
@@ -40,24 +43,17 @@ export class DevicesStateComponent implements OnInit, OnDestroy {
     @Input() widget: WidgetModel = {} as WidgetModel;
     @Input() zoom = false;
 
-    constructor(private iconRegistry: MatIconRegistry,
-                private sanitizer: DomSanitizer,
-                private devicesStateService: DevicesStateService,
-                private dashboardService: DashboardService) {
+    constructor(private devicesStateService: DevicesStateService,
+                private dashboardService: DashboardService,
+                private router: Router) {
     }
 
     ngOnInit() {
         this.setDeviceStatus();
-        this.registerIcons();
     }
 
     ngOnDestroy() {
         this.destroy.unsubscribe();
-    }
-
-    registerIcons() {
-        this.iconRegistry.addSvgIcon('online', this.sanitizer.bypassSecurityTrustResourceUrl('src/img/connect_white.svg'));
-        this.iconRegistry.addSvgIcon('offline', this.sanitizer.bypassSecurityTrustResourceUrl('src/img/disconnect_white.svg'));
     }
 
     edit() {
@@ -74,5 +70,26 @@ export class DevicesStateComponent implements OnInit, OnDestroy {
                 });
             }
         });
+    }
+
+    showOnlineDevices() {
+        this.router.navigate(['devices/deviceinstances'], {
+            state: {tab: DeviceInstancesRouterStateTabEnum.ONLINE} as DeviceInstancesRouterState,
+        });
+        return false;
+    }
+
+    showOfflineDevices() {
+        this.router.navigate(['devices/deviceinstances'], {
+            state: {tab: DeviceInstancesRouterStateTabEnum.OFFLINE} as DeviceInstancesRouterState,
+        });
+        return false;
+    }
+
+    showUnknownDevices() {
+        this.router.navigate(['devices/deviceinstances'], {
+            state: {tab: DeviceInstancesRouterStateTabEnum.UNKNOWN} as DeviceInstancesRouterState,
+        });
+        return false;
     }
 }

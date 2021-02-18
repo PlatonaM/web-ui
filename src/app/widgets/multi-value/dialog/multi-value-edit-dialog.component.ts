@@ -19,9 +19,9 @@ import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material/dialog';
 import {WidgetModel} from '../../../modules/dashboard/shared/dashboard-widget.model';
 import {ChartsExportMeasurementModel} from '../../charts/export/shared/charts-export-properties.model';
 import {DeploymentsService} from '../../../modules/processes/deployments/shared/deployments.service';
-import {ExportModel, ExportValueModel} from '../../../modules/data/export/shared/export.model';
+import {ExportModel, ExportResponseModel, ExportValueModel} from '../../../modules/exports/shared/export.model';
 import {DashboardService} from '../../../modules/dashboard/shared/dashboard.service';
-import {ExportService} from '../../../modules/data/export/shared/export.service';
+import {ExportService} from '../../../modules/exports/shared/export.service';
 import {DashboardResponseMessageModel} from '../../../modules/dashboard/shared/dashboard-response-message.model';
 import {MultiValueMeasurement, MultiValueOrderEnum} from '../shared/multi-value.model';
 import {
@@ -247,9 +247,9 @@ export class MultiValueEditDialogComponent implements OnInit {
     }
 
     initDeployments() {
-        this.exportService.getExports('', 9999, 0, 'name', 'asc').subscribe((exports: (ExportModel[] | null)) => {
+        this.exportService.getExports('', 9999, 0, 'name', 'asc').subscribe((exports: (ExportResponseModel | null)) => {
             if (exports !== null) {
-                exports.forEach((exportModel: ExportModel) => {
+                exports.instances.forEach((exportModel: ExportModel) => {
                     if (exportModel.ID !== undefined && exportModel.Name !== undefined) {
                         this.exports.push({id: exportModel.ID, name: exportModel.Name, values: exportModel.Values});
                     }

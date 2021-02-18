@@ -22,6 +22,7 @@ import {AuthorizationService} from '../../services/authorization.service';
 import {SettingsDialogService} from '../../../modules/settings/shared/settings-dialog.service';
 import {NotificationService} from './notification/shared/notification.service';
 import {NotificationModel} from './notification/shared/notification.model';
+import {interval} from 'rxjs';
 
 @Component({
     selector: 'senergy-toolbar',
@@ -47,6 +48,9 @@ export class ToolbarComponent implements OnInit {
         this.setHeader();
         this.initUser();
         this.updateNotifications();
+        interval(60 * 1000).subscribe(_ => {
+            this.updateNotifications();
+        });
     }
 
     toggle(sidenavOpen: boolean): void {

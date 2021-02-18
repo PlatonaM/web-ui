@@ -62,9 +62,11 @@ export const environment = {
   yrUrl: '${process.env.YR_URL}',
   notificationsUrl: '${process.env.NOTIFICATION_SERVICE_URL}',
   configurablesUrl: '${process.env.CONFIGURABLES_URL}',
+  marshallerUrl: '${process.env.MARSHALLER_URL}',
   timeStampCharacteristicId: '${process.env.TIMESTAMP_CHARACTERISTIC_ID}',
   timeStampCharacteristicUnixSecondsId: '${process.env.TIMESTAMP_CHARACTERISTIC_UNIX_SECONDS_ID}',
   timeStampCharacteristicUnixNanoSecondsId: '${process.env.TIMESTAMP_CHARACTERISTIC_UNIX_NANO_SECONDS_ID}',
+  timeStampCharacteristicUnixMilliSecondsId: '${process.env.TIMESTAMP_CHARACTERISTIC_UNIX_MILLI_SECONDS_ID}',
   mqttProtocolID: '${process.env.MQTT_PROTOCOL_ID}',
   getPm1FunctionId: '${process.env.GET_PM1_FUNCTION_ID}',
   getPm10FunctionId: '${process.env.GET_PM10_FUNCTION_ID}',
@@ -74,6 +76,11 @@ export const environment = {
   getPressureFunctionId: '${process.env.GET_PRESSURE_FUNCTION_ID}',
   getCo2FunctionId: '${process.env.GET_C02_FUNCTION_ID}',
   aspectAirId: '${process.env.ASPECT_AIR_ID}',
+  importRepoUrl: '${process.env.IMPORT_REPO_URL}',
+  importDeployUrl: '${process.env.IMPORT_DEPLOY_URL}',
+  importTypeIdUbaStation: '${process.env.IMPORT_TYPE_ID_UBA_STATIONS}',
+  importTypeIdDwdPollen: '${process.env.IMPORT_TYPE_ID_DWD_POLLEN}',
+  importTypeIdYrForecast: '${process.env.IMPORT_TYPE_ID_YR_FORECAST}',
 };
 `;
 

@@ -20,8 +20,8 @@ import {DashboardService} from '../../../modules/dashboard/shared/dashboard.serv
 import {
     DeviceStatusElementModel
 } from './device-status-properties.model';
-import {ExportModel} from '../../../modules/data/export/shared/export.model';
-import {ExportService} from '../../../modules/data/export/shared/export.service';
+import {ExportModel} from '../../../modules/exports/shared/export.model';
+import {ExportService} from '../../../modules/exports/shared/export.service';
 import {DeploymentsService} from '../../../modules/processes/deployments/shared/deployments.service';
 import {HttpClient} from '@angular/common/http';
 import {ProcessSchedulerService} from '../../process-scheduler/shared/process-scheduler.service';
@@ -46,7 +46,7 @@ export class DeviceStatusService {
                     this.exportService.stopPipeline({ID: element.exportId} as ExportModel).subscribe();
                 }
                 if (element.deploymentId) {
-                    this.deploymentsService.deleteDeployment(element.deploymentId).subscribe();
+                    this.deploymentsService.v2deleteDeployment(element.deploymentId).subscribe();
                 }
                 if (element.scheduleId) {
                     this.processSchedulerService.deleteSchedule(element.scheduleId).subscribe();

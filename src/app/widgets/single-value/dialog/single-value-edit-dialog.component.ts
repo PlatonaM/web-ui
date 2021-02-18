@@ -21,12 +21,13 @@ import {map, startWith} from 'rxjs/internal/operators';
 import {WidgetModel} from '../../../modules/dashboard/shared/dashboard-widget.model';
 import {ChartsExportMeasurementModel} from '../../charts/export/shared/charts-export-properties.model';
 import {DeploymentsService} from '../../../modules/processes/deployments/shared/deployments.service';
-import {ExportModel, ExportValueModel} from '../../../modules/data/export/shared/export.model';
+import {ExportModel, ExportResponseModel, ExportValueModel} from '../../../modules/exports/shared/export.model';
 import {DashboardService} from '../../../modules/dashboard/shared/dashboard.service';
-import {ExportService} from '../../../modules/data/export/shared/export.service';
+import {ExportService} from '../../../modules/exports/shared/export.service';
 import {DashboardResponseMessageModel} from '../../../modules/dashboard/shared/dashboard-response-message.model';
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material/dialog';
 import {MatAutocompleteSelectedEvent} from '@angular/material/autocomplete';
+import {ChartsExportRequestPayloadGroupModel} from "../../charts/export/shared/charts-export-request-payload.model";
 
 
 @Component({
@@ -43,6 +44,7 @@ export class SingleValueEditDialogComponent implements OnInit {
     widget: WidgetModel = {} as WidgetModel;
     vAxisValues: ExportValueModel[] = [];
     disableSave = false;
+    groupTypes = ['mean', 'sum', 'count', 'median', 'min', 'max', 'first', 'last', 'difference-first', 'difference-last', 'difference-min', 'difference-max', 'difference-count', 'difference-mean', 'difference-sum', 'difference-median'];
 
     vAxisLabel = '';
     name = '';
@@ -50,6 +52,7 @@ export class SingleValueEditDialogComponent implements OnInit {
     format = '';
     threshold = 128;
     math = '';
+    group: ChartsExportRequestPayloadGroupModel = {time: '', type: ''};
 
     constructor(private dialogRef: MatDialogRef<SingleValueEditDialogComponent>,
                 private deploymentsService: DeploymentsService,
@@ -74,14 +77,15 @@ export class SingleValueEditDialogComponent implements OnInit {
             this.threshold = widget.properties.threshold ? widget.properties.threshold : this.threshold;
             this.math = widget.properties.math ? widget.properties.math : this.math;
             this.formControl.setValue(this.widget.properties.measurement || '');
+            this.group = widget.properties.group ? widget.properties.group : this.group;
             this.initDeployments();
         });
     }
 
     initDeployments() {
-        this.exportService.getExports('', 9999, 0, 'name', 'asc').subscribe((exports: (ExportModel[] | null)) => {
+        this.exportService.getExports('', 9999, 0, 'name', 'asc').subscribe((exports: (ExportResponseModel | null)) => {
             if (exports !== null) {
-                exports.forEach((exportModel: ExportModel) => {
+                exports.instances.forEach((exportModel: ExportModel) => {
                     if (exportModel.ID !== undefined && exportModel.Name !== undefined) {
                         this.exports.push({id: exportModel.ID, name: exportModel.Name, values: exportModel.Values});
                         if (this.widget.properties.vAxis) {
@@ -120,6 +124,7 @@ export class SingleValueEditDialogComponent implements OnInit {
         this.widget.properties.format = this.format;
         this.widget.properties.threshold = this.threshold;
         this.widget.properties.math = this.math;
+        this.widget.properties.group = this.group;
 
         this.dashboardService.updateWidget(this.dashboardId, this.widget).subscribe((resp: DashboardResponseMessageModel) => {
             if (resp.message === 'OK') {

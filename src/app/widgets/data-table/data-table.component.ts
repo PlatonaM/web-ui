@@ -21,13 +21,19 @@ import {Subscription} from 'rxjs';
 import {MatTable} from '@angular/material/table';
 import {MatDialog, MatDialogConfig} from '@angular/material/dialog';
 import {DataTableEditDialogComponent} from './dialog/data-table-edit-dialog.component';
-import {LastValuesRequestElementModel, TimeValuePairModel} from '../shared/export-data.model';
+import {TimeValuePairModel} from '../shared/export-data.model';
 import {DeviceStatusConfigConvertRuleModel} from '../device-status/shared/device-status-properties.model';
 import {ExportDataService} from '../shared/export-data.service';
 import {DataTableOrderEnum, ExportValueTypes} from './shared/data-table.model';
 import {DecimalPipe} from '@angular/common';
 import {DashboardManipulationEnum} from '../../modules/dashboard/shared/dashboard-manipulation.enum';
 import {Sort, SortDirection} from '@angular/material/sort';
+import {
+    ChartsExportRequestPayloadModel,
+    ChartsExportRequestPayloadQueriesFieldsModel,
+    ChartsExportRequestPayloadQueriesModel
+} from '../charts/export/shared/charts-export-request-payload.model';
+import {map} from 'rxjs/internal/operators';
 
 
 interface DataTableComponentItem {
@@ -68,7 +74,7 @@ export class DataTableComponent implements OnInit, OnDestroy {
     }
 
     private static parseNumber(m: DataTableComponentItem, max: boolean): number {
-        if (m.value == null || typeof (m.value) === 'string') {
+        if (m.value == null) {
             if (max) {
                 return Number.MAX_VALUE;
             }
@@ -161,45 +167,80 @@ export class DataTableComponent implements OnInit, OnDestroy {
 
                 const elements = this.widget.properties.dataTable?.elements;
                 if (elements) {
-                    const queries: LastValuesRequestElementModel[] = [];
-                    elements.forEach(element => {
-                        if (element.exportId && element.exportValuePath) {
-                            queries.push({measurement: element.exportId, columnName: element.exportValueName});
-                        }
-                    });
+                    const requestPayload: ChartsExportRequestPayloadModel = {
+                        time: {
+                            last: '500000w', // arbitrary high number
+                            end: undefined,
+                            start: undefined
+                        },
+                        group: {
+                            type: undefined,
+                            time: ''
+                        },
+                        queries: [],
+                        limit: this.widget.properties.dataTable?.valuesPerElement || 1,
+                    };
+                    const array: ChartsExportRequestPayloadQueriesModel[] = [];
+                    let fieldCounter = 0;
+                    const m = new Map<number, number>();
+                    const resIndexToElementIndex: number[] = [];
 
-                    this.exportDataService.getLastValues(queries).subscribe(res => {
+                    elements.forEach((element, index) => {
+                        const fields: ChartsExportRequestPayloadQueriesFieldsModel[] = [];
+                        m.set(index, ++fieldCounter);
+                        fields.push({name: element.exportValueName, math: ''});
+                        element.exportTagSelection?.forEach(tagFilter => {
+                            fields.push({name: tagFilter.split('!')[0], math: '', filterType: '=', filterValue: tagFilter.split('!')[1]});
+                            fieldCounter++;
+                        });
+                        array.push({id: element.exportId, fields: fields});
+                    });
+                    requestPayload.queries = array;
+                    this.exportDataService.query(requestPayload)
+                        .pipe(map(model => {
+                            const values = model.results[0].series[0].values;
+                            const res: TimeValuePairModel[] = [];
+                            m.forEach((columnIndex, elementIndex) => {
+                                const dataRows = values.filter(row => row[columnIndex] !== null);
+                                dataRows.forEach(dataRow => {
+                                    resIndexToElementIndex.push(elementIndex);
+                                    res.push({time: '' + dataRow[0], value: dataRow[columnIndex]});
+                                });
+                            });
+                            return res;
+                        })).subscribe(res => {
                         this.items = [];
-                        res.forEach((pair: TimeValuePairModel, index: number) => {
+                        res.forEach((pair: TimeValuePairModel, resIndex: number) => {
+                            const elementIndex = resIndexToElementIndex[resIndex];
                             let v = pair.value;
                             if (v === true || v === false) {
                                 v = v as unknown as string;
                             }
-                            const convert = this.convert(v, elements[index].valueType);
+                            const convert = this.convert(v, elements[elementIndex].valueType);
                             const item: DataTableComponentItem = {
-                                name: elements[index].name,
+                                name: elements[elementIndex].name,
                                 status: v,
                                 value: v,
                                 icon: convert.icon,
                                 color: convert.color,
                                 class: '',
-                                time: pair.time
+                                time: '' + pair.time,
                             };
                             if (v !== null && item.icon === '') {
-                                if ((elements[index].valueType === ExportValueTypes.INTEGER
-                                    || elements[index].valueType === ExportValueTypes.FLOAT)
-                                    && elements[index].format !== undefined && elements[index].format !== null && elements[index].format !== '') {
-                                    item.status = this.decimalPipe.transform(v, elements[index].format);
+                                if ((elements[elementIndex].valueType === ExportValueTypes.INTEGER
+                                    || elements[elementIndex].valueType === ExportValueTypes.FLOAT)
+                                    && elements[elementIndex].format !== undefined && elements[elementIndex].format !== null && elements[elementIndex].format !== '') {
+                                    item.status = this.decimalPipe.transform(v, elements[elementIndex].format);
                                 }
-                                if (elements[index].unit) {
-                                    item.status += ' ' + elements[index].unit;
+                                if (elements[elementIndex].unit) {
+                                    item.status += ' ' + elements[elementIndex].unit;
                                 }
                             }
 
-                            const warn = elements[index].warning;
+                            const warn = elements[elementIndex].warning;
                             if (warn !== undefined && warn.enabled) {
-                                if ((warn.upperBoundary !== undefined && v > warn.upperBoundary)
-                                    || (warn.lowerBoundary !== undefined && v < warn.lowerBoundary)) {
+                                if ((warn.upperBoundary !== undefined && v !== null && v > warn.upperBoundary)
+                                    || (warn.lowerBoundary !== undefined && v !== null && v < warn.lowerBoundary)) {
                                     item.class = 'color-warn';
                                 }
                             }
@@ -225,8 +266,14 @@ export class DataTableComponent implements OnInit, OnDestroy {
                     case DataTableOrderEnum.AlphabeticallyDesc:
                         return b.name.charCodeAt(0) - a.name.charCodeAt(0);
                     case DataTableOrderEnum.ValueAsc:
+                        if (typeof a.value === 'string' || typeof b.value === 'string') {
+                            return ('' + a.value).localeCompare('' + b.value);
+                        }
                         return DataTableComponent.parseNumber(a, true) - DataTableComponent.parseNumber(b, true);
                     case DataTableOrderEnum.ValueDesc:
+                        if (typeof a.value === 'string' || typeof b.value === 'string') {
+                            return ('' + b.value).localeCompare('' + a.value);
+                        }
                         return DataTableComponent.parseNumber(b, false) - DataTableComponent.parseNumber(a, false);
                     case DataTableOrderEnum.TimeDesc:
                         return new Date(b.time || '').valueOf() - new Date(a.time || '').valueOf();
@@ -243,7 +290,7 @@ export class DataTableComponent implements OnInit, OnDestroy {
         }
     }
 
-    private convert(status: string | number | boolean, type: ExportValueTypes): { icon: string, color: string } {
+    private convert(status: string | number | boolean | null, type: ExportValueTypes): { icon: string, color: string } {
         const convertRules: DeviceStatusConfigConvertRuleModel[] | undefined = this.widget.properties.dataTable?.convertRules;
         if (convertRules) {
             for (let i = 0; i < convertRules.length; i++) {
@@ -255,9 +302,12 @@ export class DataTableComponent implements OnInit, OnDestroy {
                         break;
                     }
                     case ExportValueTypes.BOOLEAN: {
-                        if (status === JSON.parse(convertRules[i].status)) {
-                            return {icon: convertRules[i].icon, color: convertRules[i].color};
-                        }
+                        try {
+                            if (status === JSON.parse(convertRules[i].status)) {
+                                return {icon: convertRules[i].icon, color: convertRules[i].color};
+                            }
+                        } catch (_) {
+                        } // happens when rule is not parsable, no problem
                         break;
                     }
                     case ExportValueTypes.FLOAT:

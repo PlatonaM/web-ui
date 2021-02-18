@@ -69,41 +69,42 @@ import {MatChipsModule} from '@angular/material/chips';
 import {DesignerSnackBarComponent} from './designer/snack-bar/designer-snack-bar.component';
 import {MatBadgeModule} from '@angular/material/badge';
 import {FilterCriteriaDialogComponent} from './designer/dialogs/filter-criteria-dialog/filter-criteria-dialog.component';
+import {DeploymentsStartParameterDialogComponent} from './deployments/dialogs/deployments-start-parameter-dialog.component';
 
 const processRepo = {
     path: 'processes/repository',
     pathMatch: 'full',
     component: ProcessRepoComponent,
-    data: {header: 'Processes'}
+    data: {header: 'Repository'}
 };
 const processDeployments = {
     path: 'processes/deployments',
     pathMatch: 'full',
     component: ProcessDeploymentsComponent,
-    data: {header: 'Processes'}
+    data: {header: 'Deployments'}
 };
 const processDeploymentsConfig = {
     path: 'processes/deployments/config',
     pathMatch: 'full',
     component: ProcessDeploymentsConfigComponent,
-    data: {header: 'Processes'}
+    data: {header: 'Deployments'}
 };
 const processMonitor = {
     path: 'processes/monitor',
     pathMatch: 'full',
     component: ProcessMonitorComponent,
-    data: {header: 'Processes'}
+    data: {header: 'Monitor'}
 };
 const processDesignerEdit = {
     path: 'processes/designer/:id',
     component: ProcessDesignerComponent,
-    data: {header: 'Processes'}
+    data: {header: 'Designer'}
 };
 const processDesigner = {
     path: 'processes/designer',
     pathMatch: 'full',
     component: ProcessDesignerComponent,
-    data: {header: 'Processes'}
+    data: {header: 'Designer'}
 };
 
 @NgModule({
@@ -144,6 +145,7 @@ const processDesigner = {
     declarations: [
         ProcessRepoComponent,
         ProcessDeploymentsComponent,
+        DeploymentsStartParameterDialogComponent,
         ProcessDeploymentsConfigComponent,
         DeploymentsConfigTimeEventComponent,
         ProcessMonitorComponent,

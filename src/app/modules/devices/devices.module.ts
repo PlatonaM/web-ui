@@ -22,21 +22,14 @@ import {InfiniteScrollModule} from 'ngx-infinite-scroll';
 
 import {DeviceInstancesComponent} from './device-instances/device-instances.component';
 import {NetworksComponent} from './networks/networks.component';
-import {DeviceTypesOverviewComponent} from './device-types-overview/device-types-overview.component';
 import {CoreModule} from '../../core/core.module';
 import {NetworksEditDialogComponent} from './networks/dialogs/networks-edit-dialog.component';
 import {DeviceInstancesServiceDialogComponent} from './device-instances/dialogs/device-instances-service-dialog.component';
 import {DeviceInstancesEditDialogComponent} from './device-instances/dialogs/device-instances-edit-dialog.component';
+import {DeviceInstancesSelectDialogComponent} from './device-instances/dialogs/device-instances-select-dialog.component';
 import {FormsModule, ReactiveFormsModule} from '@angular/forms';
 import {NetworksClearDialogComponent} from './networks/dialogs/networks-clear-dialog.component';
 import {DeviceInstancesGridComponent} from './device-instances/device-instances-grid/device-instances-grid.component';
-import {DeviceTypesOverviewModule} from './device-types-overview/device-types-overview.module';
-import {ConceptsComponent} from './concepts/concepts.component';
-import {ConceptsNewDialogComponent} from './concepts/dialogs/concepts-new-dialog.component';
-import {CharacteristicsComponent} from './characteristics/characteristics.component';
-import {CharacteristicsNewDialogComponent} from './characteristics/dialogs/characteristics-new-dialog.component';
-import {ConceptsEditDialogComponent} from './concepts/dialogs/concepts-edit-dialog.component';
-import {CharacteristicsEditDialogComponent} from './characteristics/dialogs/characteristics-edit-dialog.component';
 import {MatGridListModule} from '@angular/material/grid-list';
 import {MatCardModule} from '@angular/material/card';
 import {MatIconModule} from '@angular/material/icon';
@@ -61,28 +54,59 @@ import {MatTabsModule} from '@angular/material/tabs';
 import {MatCheckboxModule} from '@angular/material/checkbox';
 import {MatSortModule} from '@angular/material/sort';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
-import {FunctionsComponent} from './functions/functions.component';
 import {DeviceInstancesExportDialogComponent} from './device-instances/dialogs/device-instances-export-dialog.component';
-import {FunctionsEditDialogComponent} from './functions/dialog/functions-edit-dialog.component';
-import {AspectsComponent} from './aspects/aspects.component';
-import {AspectsEditDialogComponent} from './aspects/dialog/aspects-edit-dialog.component';
-import {DeviceClassesComponent} from './device-classes/device-classes.component';
-import {DeviceClassesEditDialogComponent} from './device-classes/dialog/device-classes-edit-dialog.component';
-import {FunctionsCreateDialogComponent} from './functions/dialog/functions-create-dialog.component';
+import {MatTreeModule} from '@angular/material/tree';
+import {DeviceGroupsComponent} from './device-groups/device-groups.component';
+import {DeviceGroupsEditComponent} from './device-groups/edit/device-groups-edit.component';
+import {LocationsComponent} from './locations/locations.component';
+import {LocationsEditComponent} from './locations/edit/locations-edit.component';
+import {DeviceGroupsPipelineHelperDialogComponent} from './device-groups/edit/device-groups-pipeline-helper-dialog/device-groups-pipeline-helper-dialog.component';
+import {DeviceGroupsSelectDialogComponent} from './device-groups/dialog/device-groups-select-dialog.component';
 
-const networks = {path: 'devices/networks', pathMatch: 'full', component: NetworksComponent, data: {header: 'Devices'}};
+const networks = {path: 'devices/networks', pathMatch: 'full', component: NetworksComponent, data: {header: 'Hubs'}};
 const deviceInstances = {
     path: 'devices/deviceinstances',
     pathMatch: 'full',
     component: DeviceInstancesComponent,
     data: {header: 'Devices'}
 };
-const deviceTypes = {path: 'devices/devicetypesoverview', pathMatch: 'full', component: DeviceTypesOverviewComponent, data: {header: 'Devices'}};
-const concepts = {path: 'devices/concepts', pathMatch: 'full', component: ConceptsComponent, data: {header: 'Devices'}};
-const characteristics = {path: 'devices/characteristics', pathMatch: 'full', component: CharacteristicsComponent, data: {header: 'Devices'}};
-const functions = {path: 'devices/functions', pathMatch: 'full', component: FunctionsComponent, data: {header: 'Devices'}};
-const aspects = {path: 'devices/aspects', pathMatch: 'full', component: AspectsComponent, data: {header: 'Devices'}};
-const deviceClasses = {path: 'devices/deviceclasses', pathMatch: 'full', component: DeviceClassesComponent, data: {header: 'Devices'}};
+const deviceGroups = {
+    path: 'devices/devicegroups',
+    pathMatch: 'full',
+    component: DeviceGroupsComponent,
+    data: {header: 'Device Groups'}
+};
+const deviceGroupsCreate = {
+    path: 'devices/devicegroups/edit',
+    pathMatch: 'full',
+    component: DeviceGroupsEditComponent,
+    data: {header: 'Device Groups'}
+};
+const deviceGroupsEdit = {
+    path: 'devices/devicegroups/edit/:id',
+    pathMatch: 'full',
+    component: DeviceGroupsEditComponent,
+    data: {header: 'Device Groups'}
+};
+
+const locations = {
+    path: 'devices/locations',
+    pathMatch: 'full',
+    component: LocationsComponent,
+    data: {header: 'Locations'}
+};
+const locationsCreate = {
+    path: 'devices/locations/edit',
+    pathMatch: 'full',
+    component: LocationsEditComponent,
+    data: {header: 'Locations'}
+};
+const locationsEdit = {
+    path: 'devices/locations/edit/:id',
+    pathMatch: 'full',
+    component: LocationsEditComponent,
+    data: {header: 'Locations'}
+};
 
 @NgModule({
     imports: [MatGridListModule,
@@ -116,31 +140,31 @@ const deviceClasses = {path: 'devices/deviceclasses', pathMatch: 'full', compone
         MatCheckboxModule,
         MatSortModule,
         MatProgressSpinnerModule,
-        DeviceTypesOverviewModule,
-        RouterModule.forChild([networks, deviceInstances, deviceTypes, concepts, characteristics, functions, aspects, deviceClasses])],
+        RouterModule.forChild([
+            locations,
+            locationsCreate,
+            locationsEdit,
+            networks,
+            deviceInstances,
+            deviceGroups,
+            deviceGroupsCreate,
+            deviceGroupsEdit]), MatTreeModule],
     declarations: [
         NetworksComponent,
         NetworksEditDialogComponent,
         DeviceInstancesComponent,
-        DeviceTypesOverviewComponent,
         DeviceInstancesServiceDialogComponent,
         DeviceInstancesEditDialogComponent,
+        DeviceInstancesSelectDialogComponent,
         NetworksClearDialogComponent,
         DeviceInstancesGridComponent,
         DeviceInstancesExportDialogComponent,
-        ConceptsComponent,
-        ConceptsNewDialogComponent,
-        CharacteristicsComponent,
-        CharacteristicsNewDialogComponent,
-        ConceptsEditDialogComponent,
-        CharacteristicsEditDialogComponent,
-        FunctionsComponent,
-        FunctionsEditDialogComponent,
-        FunctionsCreateDialogComponent,
-        AspectsComponent,
-        AspectsEditDialogComponent,
-        DeviceClassesComponent,
-        DeviceClassesEditDialogComponent,
+        DeviceGroupsComponent,
+        DeviceGroupsEditComponent,
+        DeviceGroupsSelectDialogComponent,
+        LocationsComponent,
+        LocationsEditComponent,
+        DeviceGroupsPipelineHelperDialogComponent,
     ],
 })
 

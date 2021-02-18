@@ -19,6 +19,9 @@ import {IOModel, OperatorModel} from '../shared/operator.model';
 import {ActivatedRoute} from '@angular/router';
 import {OperatorRepoService} from '../shared/operator-repo.service';
 import {MatSnackBar} from '@angular/material/snack-bar';
+import {AuthorizationService} from '../../../../core/services/authorization.service';
+import {PermissionsService} from '../../../permissions/shared/permissions.service';
+import {PermissionsUserModel} from '../../../permissions/shared/permissions-user.model';
 
 
 @Component({
@@ -29,23 +32,39 @@ import {MatSnackBar} from '@angular/material/snack-bar';
 export class OperatorComponent implements OnInit {
 
     operator = {} as OperatorModel;
+    userId: string | Error = '';
     dropdown = [
         'float',
         'string',
         'int'
     ];
+    shareUser: string | undefined = undefined;
 
-    constructor(private route: ActivatedRoute, private operatorService: OperatorRepoService, public snackBar: MatSnackBar) {
+    constructor(private route: ActivatedRoute,
+                private operatorService: OperatorRepoService,
+                public snackBar: MatSnackBar,
+                protected auth: AuthorizationService,
+                protected permission: PermissionsService
+    ) {
     }
 
     ngOnInit() {
+        this.userId = this.auth.getUserId();
         const id = this.route.snapshot.paramMap.get('id');
         if (id !== null) {
             this.operatorService.getOperator(id).subscribe((resp: OperatorModel | null) => {
                 if (resp !== null) {
                     this.operator = resp;
+                    this.operator.editable = resp.userId === this.userId;
+                    if (this.operator.userId !== undefined && this.userId !== this.operator.userId ) {
+                        this.permission.getUserById(this.operator.userId).subscribe((response: PermissionsUserModel) => {
+                            this.shareUser = response.username;
+                        });
+                    }
                 }
             });
+        } else {
+            this.operator.editable = true;
         }
     }
 

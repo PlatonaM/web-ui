@@ -24,6 +24,7 @@ import {ResponsiveService} from '../../../core/services/responsive.service';
 import {SortModel} from '../../../core/components/sort/shared/sort.model';
 import {Subscription} from 'rxjs';
 import {SearchbarService} from '../../../core/components/searchbar/shared/searchbar.service';
+import {PermissionsService} from '../../permissions/shared/permissions.service';
 
 const grids = new Map([
     ['xs', 1],
@@ -45,6 +46,7 @@ export class OperatorRepoComponent implements OnInit, OnDestroy {
     gridCols = 0;
     sortAttributes = [new SortModel('Name', 'name', 'asc')];
     userId: string | Error = '';
+    shareUser = '';
 
     private searchText = '';
     private limitInit = 54;
@@ -59,7 +61,9 @@ export class OperatorRepoComponent implements OnInit, OnDestroy {
                 private searchbarService: SearchbarService,
                 public snackBar: MatSnackBar,
                 private dialogsService: DialogsService,
-                private responsiveService: ResponsiveService) {
+                private responsiveService: ResponsiveService,
+                protected permission: PermissionsService
+    ) {
     }
 
     ngOnInit() {
@@ -102,22 +106,26 @@ export class OperatorRepoComponent implements OnInit, OnDestroy {
         });
 
     }
+    getOperatorUser(id: string | undefined) {
+        if (id  !== undefined) {
+            this.permission.getUserById(id).subscribe((item) => {
+                this.shareUser = item.username;
+            });
+        }
+    }
 
     private getOperators(reset: boolean) {
         if (reset) {
             this.setRepoItemsParams(this.limitInit);
             this.reset();
         }
-        this.operatorRepoService.getOperators(this.searchText, this.limit, this.offset, this.sortAttribute.value, this.sortAttribute.order).subscribe((resp: { operators: OperatorModel[] }) => {
+        this.operatorRepoService.getOperators(this.searchText, this.limit, this.offset, this.sortAttribute.value, this.sortAttribute.order).
+        subscribe((resp: { operators: OperatorModel[] }) => {
             if (resp.operators.length !== this.limit) {
                 this.allDataLoaded = true;
             }
             for (const operator of resp.operators) {
-                if (operator.userId === this.userId) {
-                    operator.editable = true;
-                } else {
-                    operator.editable = false;
-                }
+                operator.editable = operator.userId === this.userId;
                 this.operators.push(operator);
             }
             this.ready = true;

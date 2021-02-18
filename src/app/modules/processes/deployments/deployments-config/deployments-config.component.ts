@@ -50,6 +50,7 @@ export class ProcessDeploymentsConfigComponent implements OnInit {
     deploymentFormGroup!: FormGroup;
     flowList: FlowModel[] = [];
     ready = false;
+    optionGroups: Map<number, Map<string, V2DeploymentsPreparedSelectionOptionModel[]>> = new Map();
 
     constructor(private _formBuilder: FormBuilder,
                 private processRepoService: ProcessRepoService,
@@ -66,6 +67,7 @@ export class ProcessDeploymentsConfigComponent implements OnInit {
     ngOnInit() {
         if (this.processId !== '') {
             this.deploymentsService.getPreparedDeployments(this.processId).subscribe((deployment: V2DeploymentsPreparedModel | null) => {
+                this.initOptionGroups(deployment);
                 this.initFormGroup(deployment);
             });
         } else {
@@ -73,6 +75,7 @@ export class ProcessDeploymentsConfigComponent implements OnInit {
                 this.deploymentsService.v2getDeployments(this.deploymentId).subscribe((deployment: V2DeploymentsPreparedModel | null) => {
                     if (deployment) {
                         deployment.id = '';
+                        this.initOptionGroups(deployment);
                         this.initFormGroup(deployment);
                     } else {
                         this.snackBar.open('Error while copying the deployment! Probably old version', undefined, {duration: 2000});
@@ -131,22 +134,50 @@ export class ProcessDeploymentsConfigComponent implements OnInit {
     }
 
     changeTaskSelectionOption(selectedElementIndex: number, selectionOptionIndex: number): void {
+        this.changeElementSelectionOption(selectedElementIndex, selectionOptionIndex, 'task');
+    }
 
-        this.setSelectedServiceId(selectedElementIndex, selectionOptionIndex, 'task');
+    changeEventSelectionOption(selectedElementIndex: number, selectionOptionIndex: number): void {
+        this.changeElementSelectionOption(selectedElementIndex, selectionOptionIndex, 'message_event');
+    }
 
+
+    changeElementSelectionOption(selectedElementIndex: number, selectionOptionIndex: number, elementType: string): void {
         const elementClicked = this.getElement(selectedElementIndex);
-        if (elementClicked.group) {
+        const option = this.getOption(elementClicked, selectionOptionIndex);
+
+        const that = this;
+
+        const setOption = function(elementIndex: number) {
+            const selectedDeviceGroupId = that.elementsFormArray.at(elementIndex).get(elementType + '.selection.selected_device_group_id');
+            const selectedDeviceId = that.elementsFormArray.at(elementIndex).get(elementType + '.selection.selected_device_id');
+            if (option && option.device_group) {
+                if (selectedDeviceGroupId) {
+                    selectedDeviceGroupId.patchValue(option.device_group.id);
+                }
+                if (selectedDeviceId) {
+                    selectedDeviceId.patchValue(null);
+                }
+            }
+            if (option && option.device) {
+                if (selectedDeviceGroupId) {
+                    selectedDeviceGroupId.patchValue(null);
+                }
+                if (selectedDeviceId) {
+                    selectedDeviceId.patchValue(option.device.id);
+                }
+            }
+            that.setSelectedServiceId(elementIndex, selectionOptionIndex, elementType);
+        };
+
+        // set option for this element
+        setOption(selectedElementIndex);
+
+        // set options for tasks of the same group
+        if (elementClicked.group && elementType === 'task') {
             this.elements.forEach((element: V2DeploymentsPreparedElementModel, elementIndex: number) => {
-                if (element.task !== null && elementClicked.bpmn_id !== element.bpmn_id) {
-                    if (elementClicked.group === (this.getElement(elementIndex).group)) {
-                        const selectedDeviceId = this.elementsFormArray.at(elementIndex).get('task.selection.selected_device_id');
-                        if (selectedDeviceId) {
-                            if (elementClicked.task) {
-                                selectedDeviceId.patchValue(elementClicked.task.selection.selected_device_id);
-                                this.setSelectedServiceId(elementIndex, this.getSelectionOptionIndex(selectedElementIndex, elementClicked.task.selection.selected_device_id), 'task');
-                            }
-                        }
-                    }
+                if (element.task !== null && elementClicked.bpmn_id !== element.bpmn_id && elementClicked.group === element.group) {
+                    setOption(elementIndex);
                 }
             });
         }
@@ -164,13 +195,45 @@ export class ProcessDeploymentsConfigComponent implements OnInit {
         const selection = <FormGroup>this.deploymentFormGroup.get(['elements', elementIndex, elementType, 'selection']);
         const services = <FormArray>this.deploymentFormGroup.get(['elements', elementIndex, elementType, 'selection', 'selection_options', selectionOptionIndex, 'services']);
         selection.patchValue({'selection_options_index': selectionOptionIndex});
-        if (services.value.length <= 1) {
-            selection.patchValue({'selected_service_id': services.value[0].id});
-            selection.patchValue({'show': false});
-        } else {
-            selection.patchValue({'selected_service_id': ''});
-            selection.patchValue({'show': true});
+        switch (services.value.length) {
+            case 0:
+                selection.patchValue({'selected_service_id': null});
+                selection.patchValue({'show': false});
+                break;
+            case 1:
+                selection.patchValue({'selected_service_id': services.value[0].id});
+                selection.patchValue({'show': false});
+                break;
+            default:
+                selection.patchValue({'selected_service_id': null});
+                selection.patchValue({'show': true});
         }
+    }
+
+    getTaskIndex(element: V2DeploymentsPreparedElementModel): (option: V2DeploymentsPreparedSelectionOptionModel) => number {
+        return option => {
+            if (element.task?.selection.selection_options === undefined) {
+                return -1;
+            }
+            return element.task?.selection.selection_options.findIndex(o =>
+                (o.device && o.device.id === option.device?.id)
+                || o.device_group && (o.device_group.id === option.device_group?.id));
+        };
+    }
+
+    getMsgEventIndex(element: V2DeploymentsPreparedElementModel): (option: V2DeploymentsPreparedSelectionOptionModel) => number {
+        return option => {
+            if (element.message_event?.selection.selection_options === undefined) {
+                return -1;
+            }
+            return element.message_event?.selection.selection_options.findIndex(o =>
+                (o.device && o.device.id === option.device?.id)
+                || o.device_group && (o.device_group.id === option.device_group?.id));
+        };
+    }
+
+    getViewValue(option: any): string {
+        return (option.device && option.device.name) || (option.device_group && option.device_group.name);
     }
 
     private getRouterParams(): void {
@@ -184,15 +247,14 @@ export class ProcessDeploymentsConfigComponent implements OnInit {
         }
     }
 
-    private getSelectionOptionIndex(elementIndex: number, selectedDeviceId: string): number {
-        const selectionOptions: V2DeploymentsPreparedSelectionOptionModel[] = (<FormArray>this.deploymentFormGroup.get(['elements', elementIndex, 'task', 'selection', 'selection_options'])).value;
-        let index = -1;
-        selectionOptions.forEach((selectionOption: V2DeploymentsPreparedSelectionOptionModel, selectionOptionIndex: number) => {
-            if (selectionOption.device.id === selectedDeviceId) {
-                index = selectionOptionIndex;
-            }
-        });
-        return index;
+    private getOption(element: V2DeploymentsPreparedElementModel, selectionOptionIndex: number): V2DeploymentsPreparedSelectionOptionModel | null {
+        if ( element.task && element.task.selection.selection_options ) {
+            return element.task.selection.selection_options[selectionOptionIndex];
+        }
+        if ( element.message_event && element.message_event.selection.selection_options ) {
+            return element.message_event.selection.selection_options[selectionOptionIndex];
+        }
+        return null;
     }
 
     private getFlows(): void {
@@ -211,4 +273,39 @@ export class ProcessDeploymentsConfigComponent implements OnInit {
     }
 
 
+    displayParameter(value: string): boolean {
+        const matches = value.match(/^\${.*}$/);
+        console.log(matches);
+        return !(matches && matches.length);
+    }
+
+    private getOptionGroups(selection_options: V2DeploymentsPreparedSelectionOptionModel[]): Map<string, V2DeploymentsPreparedSelectionOptionModel[]> {
+        const devices: V2DeploymentsPreparedSelectionOptionModel[] = [];
+        const deviceGroups: V2DeploymentsPreparedSelectionOptionModel[] = [];
+        for (const option of selection_options ) {
+            if (option.device) {
+                devices.push(option);
+            }
+            if (option.device_group) {
+                deviceGroups.push(option);
+            }
+        }
+        const result = new Map<string, V2DeploymentsPreparedSelectionOptionModel[]>();
+        result.set('Devices', devices);
+        result.set('Device-Groups', deviceGroups);
+        return result;
+    }
+
+    private initOptionGroups(deployment: V2DeploymentsPreparedModel | null) {
+        if (deployment) {
+            deployment.elements.forEach((element, index) => {
+                if (element.task) {
+                    this.optionGroups.set(index, this.getOptionGroups(element.task.selection.selection_options));
+                }
+                if (element.message_event) {
+                    this.optionGroups.set(index, this.getOptionGroups(element.message_event.selection.selection_options));
+                }
+            });
+        }
+    }
 }

@@ -15,8 +15,9 @@
   -->
 
 <h2 mat-dialog-title>Edit Air Recommendation</h2>
+<senergy-widget-spinner [show]="!ready"></senergy-widget-spinner>
 
-<mat-dialog-content>
+<mat-dialog-content *ngIf="ready">
 
     <mat-vertical-stepper #stepper>
         <mat-step label="Give the widget a name">
@@ -43,18 +44,6 @@
                 </div>
                 <div *ngIf="!hasValidUBAStation()" class="small-error-text color-warn">
                     No <span matTooltip="Umweltbundesamt">UBA</span> station within {{maxUBADistance}} km!
-                </div>
-                <div *ngIf="hasValidPollenArea()" class="help-text color-accent">
-                    <span matTooltip="Deutscher Wetterdienst">DWD</span> pollen area: {{dwd_partregion_name}}
-                </div>
-                <div *ngIf="!hasValidPollenArea()" class="small-error-text color-warn">
-                    Location outside all <span matTooltip="Deutscher Wetterdienst">DWD</span> pollen areas!
-                </div>
-                <div *ngIf="!this.yrPath" class="small-error-text color-warn">
-                    Can't get weather forecast for this location!
-                </div>
-                <div *ngIf="this.yrPath" class="small-error-text color-accent">
-                    Weather forecast available
                 </div>
             </div>
             <div *ngIf="changeLocation">
@@ -98,8 +87,7 @@
                 <mat-form-field color="accent">
                     <mat-label>Enable pollen warnings</mat-label>
                     <mat-select multiple [(ngModel)]="pollenSelected"
-                                (closed)="measurementsSelected(pollen, pollenSelected)"
-                                [disabled]="!hasValidPollenArea()">
+                                (closed)="measurementsSelected(pollen, pollenSelected)">
                         <mat-option *ngFor="let option of pollen" [value]="option.name_html">
                             <div [innerHTML]="option.name_html"></div>
                         </mat-option>
@@ -137,24 +125,18 @@
                                     <td>
                                         <mat-form-field color="accent">
                                             <mat-label>Export</mat-label>
-                                            <mat-select required placeholder="Export" [(ngModel)]="option.export"
-                                                        [compareWith]="compareExports">
-                                                <mat-option *ngFor="let export of exports" [value]="export">
-                                                    {{export.name}}
-                                                </mat-option>
-                                            </mat-select>
+                                            <senergy-select-search [required]="true" placeholder="Export" [(ngModel)]="option.export"
+                                                        [compareWith]="compareExports" [options]="exports" useOptionViewProperty="Name">
+                                            </senergy-select-search>
                                         </mat-form-field>
                                     </td>
                                     <td>
                                         <mat-form-field color="accent">
                                             <mat-label>Value</mat-label>
-                                            <mat-select required placeholder="Value" [(ngModel)]="option.data.column"
-                                                        [compareWith]="compareExportValueModels">
-                                                <mat-option *ngFor="let value of option.export?.values || []"
-                                                            [value]="value">
-                                                    {{value.Name}}
-                                                </mat-option>
-                                            </mat-select>
+                                            <senergy-select-search [required]="true" placeholder="Value" [(ngModel)]="option.data.column"
+                                                        [compareWith]="compareExportValueModels" [options]="option.export?.Values || []"
+                                                        useOptionViewProperty="Name">
+                                            </senergy-select-search>
                                         </mat-form-field>
                                     </td>
                                     <td>
@@ -181,26 +163,22 @@
                                         <td>
                                             <mat-form-field color="accent">
                                                 <mat-label>Export</mat-label>
-                                                <mat-select required placeholder="Export"
+                                                <senergy-select-search [required]="true" placeholder="Export"
                                                             [(ngModel)]="option.outsideExport"
-                                                            [compareWith]="compareExports">
-                                                    <mat-option *ngFor="let export of exports" [value]="export">
-                                                        {{export.name}}
-                                                    </mat-option>
-                                                </mat-select>
+                                                            [compareWith]="compareExports"
+                                                            [options]="exports" useOptionViewProperty="Name">
+                                                </senergy-select-search>
                                             </mat-form-field>
                                         </td>
                                         <td>
                                             <mat-form-field color="accent">
                                                 <mat-label>Value</mat-label>
-                                                <mat-select required placeholder="Value"
+                                                <senergy-select-search [required]="true" placeholder="Value"
                                                             [(ngModel)]="option.outsideData.column"
-                                                            [compareWith]="compareExportValueModels">
-                                                    <mat-option *ngFor="let value of option.outsideExport?.values || []"
-                                                                [value]="value">
-                                                        {{value.Name}}
-                                                    </mat-option>
-                                                </mat-select>
+                                                            [compareWith]="compareExportValueModels"
+                                                            [options]="option.outsideExport?.Values || []"
+                                                            useOptionViewProperty="Name">
+                                                </senergy-select-search>
                                             </mat-form-field>
                                         </td>
                                         <td>
@@ -296,7 +274,7 @@
                 <mat-list-item>
                     <mat-icon mat-list-icon svgIcon="yr"></mat-icon>
                     Weather forecast from&nbsp;
-                    <a target="_blank" rel="noopener noreferrer" href="{{'http://www.yr.no' + yrPath}}">
+                    <a target="_blank" rel="noopener noreferrer" href="{{'http://www.yr.no'}}">
                         Yr
                     </a>
                     , delivered by the Norwegian Meteorological Institute and the NRK
@@ -321,7 +299,7 @@
     </mat-vertical-stepper>
 </mat-dialog-content>
 
-<mat-dialog-actions fxLayoutAlign="end center">
+<mat-dialog-actions fxLayoutAlign="end center" *ngIf="ready">
     <button mat-raised-button color="primary" (click)="close()">Cancel</button>
     <button mat-raised-button color="accent" (click)="save()" [disabled]="disableSave">Save</button>
 </mat-dialog-actions>

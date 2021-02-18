@@ -35,17 +35,48 @@ export class PipelineRegistryService {
         return this.http.get<PipelineModel[]>
         (environment.pipelineRegistryUrl + '/pipeline?order=' + order).pipe(
             map(resp => resp || []),
+            map(resp => {
+                resp.forEach(pipe => this.fixMaps(pipe));
+                return resp;
+            }),
             catchError(this.errorHandlerService.handleError(PipelineRegistryService.name, 'getPipelines: Error', []))
         );
 
     }
 
+    getPipelinesWithSelectable(selectableId: string): Observable<PipelineModel[]> {
+        return this.getPipelines().pipe(map(pipes => pipes || []), map(pipes => pipes.filter(pipe =>
+            pipe.operators.findIndex(operator =>
+                operator.inputSelections !== undefined && operator.inputSelections.findIndex(selection =>
+                selection.selectableId === selectableId) !== -1) !== -1
+        )));
+    }
+
     getPipeline(id: string): Observable<PipelineModel | null> {
         return this.http.get<PipelineModel>
         (environment.pipelineRegistryUrl + '/pipeline/' + id).pipe(
-            map(resp => resp || null),
+            map(resp => {
+                if (!resp) {
+                    return null;
+                }
+                this.fixMaps(resp);
+                return resp;
+            }),
             catchError(this.errorHandlerService.handleError(PipelineRegistryService.name, 'getPipeline: Error', null))
         );
+    }
 
+    private fixMaps(pipe: PipelineModel) {
+        pipe.operators.forEach(op => {
+            if (op.config !== undefined) {
+                const m = new Map<string, string>();
+                // @ts-ignore this is ok, api gives object not map
+                for (const key of Object.keys(op.config)) {
+                    // @ts-ignore this is ok, api gives object not map
+                    m.set(key, op.config[key]);
+                }
+                op.config = m;
+            }
+        });
     }
 }

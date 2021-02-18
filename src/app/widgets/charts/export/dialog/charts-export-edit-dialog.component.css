@@ -20,7 +20,6 @@
 
 .form {
     min-width: 500px;
-    max-width: 700px;
 }
 
 table {
@@ -47,3 +46,11 @@ mat-dialog-actions button:not(:last-child) {
     margin-right: 8px;
 }
 
+.mat-column-duplicate-delete {
+    width: 40px;
+}
+
+.from-to {
+    display: inline-block;
+    width: 37%;
+}

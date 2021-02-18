@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import {AfterContentChecked, ChangeDetectorRef, Component, Inject, OnInit} from '@angular/core';
+import {ChangeDetectorRef, Component, Inject, OnInit} from '@angular/core';
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material/dialog';
 import {WidgetModel} from '../../../modules/dashboard/shared/dashboard-widget.model';
 import {DeploymentsService} from '../../../modules/processes/deployments/shared/deployments.service';
@@ -22,7 +22,7 @@ import {
     ExportModel,
     ExportValueBaseModel,
     ExportValueCharacteristicModel
-} from '../../../modules/data/export/shared/export.model';
+} from '../../../modules/exports/shared/export.model';
 import {DashboardService} from '../../../modules/dashboard/shared/dashboard.service';
 import {AbstractControl, FormArray, FormBuilder, FormControl, FormGroup, Validators} from '@angular/forms';
 import {DeviceStatusConfigConvertRuleModel} from '../../device-status/shared/device-status-properties.model';
@@ -36,13 +36,13 @@ import {
     DeviceTypeFunctionModel,
     DeviceTypeInteractionEnum,
     DeviceTypeServiceModel
-} from '../../../modules/devices/device-types-overview/shared/device-type.model';
+} from '../../../modules/metadata/device-types-overview/shared/device-type.model';
 import {
     DeviceInstancesPermSearchModel,
     DeviceSelectablesModel
 } from '../../../modules/devices/device-instances/shared/device-instances.model';
 import {DataTableHelperService} from '../shared/data-table-helper.service';
-import {ExportService} from '../../../modules/data/export/shared/export.service';
+import {ExportService} from '../../../modules/exports/shared/export.service';
 import {PipelineModel, PipelineOperatorModel} from '../../../modules/data/pipeline-registry/shared/pipeline.model';
 import {V2DeploymentsPreparedModel} from '../../../modules/processes/deployments/shared/deployments-prepared-v2.model';
 import {forkJoin, Observable, of} from 'rxjs';
@@ -68,6 +68,8 @@ export class DataTableEditDialogComponent implements OnInit {
     exportTypes = ExportValueTypes;
     orderValues = DataTableOrderEnum;
     operatorExportValueCache = new Map<String, ExportValueBaseModel[]>();
+    numReady = 0;
+    numReadyNeeded = 2; // helper and widget raw data
     ready = false;
     saving = false;
     icons: string[] = [
@@ -80,6 +82,7 @@ export class DataTableEditDialogComponent implements OnInit {
         refreshTime: [undefined],
         elements: this.fb.array([]),
         convertRules: this.fb.array([]),
+        valuesPerElement: [1, Validators.min(1)],
     });
 
     constructor(private dialogRef: MatDialogRef<DataTableEditDialogComponent>,
@@ -101,17 +104,21 @@ export class DataTableEditDialogComponent implements OnInit {
     }
 
     ngOnInit() {
-        this.dataTableHelperService.initialize().subscribe(() => this.ready = true);
+        this.dataTableHelperService.initialize().subscribe(() => {
+            this.numReady++;
+            this.setReady();
+        });
         this.getWidgetData();
     }
 
 
-    onFunctionSelected(element: AbstractControl) {
+    onFunctionSelected(element: AbstractControl): Observable<DeviceSelectablesModel[]> {
         const functionId = element.get('elementDetails')?.get('device')?.get('functionId')?.value;
         const aspectId = element.get('elementDetails')?.get('device')?.get('aspectId')?.value;
         if (aspectId) {
-            this.dataTableHelperService.preloadDevicesOfFunctionAndAspect(aspectId, functionId).subscribe();
+            return this.dataTableHelperService.preloadDevicesOfFunctionAndAspect(aspectId, functionId)
         }
+        return of([]);
     }
 
 
@@ -147,17 +154,20 @@ export class DataTableEditDialogComponent implements OnInit {
                 order: widget.properties.dataTable?.order || this.orderValues.Default,
                 valueAlias: widget.properties.dataTable?.valueAlias,
                 refreshTime: widget.properties.dataTable?.refreshTime || 60,
+                valuesPerElement: widget.properties.dataTable?.valuesPerElement || 1,
             });
 
             const convertRules = widget.properties.dataTable?.convertRules || [];
             convertRules.forEach(rule => this.addConvertRule(rule));
 
             const measurements: DataTableElementModel[] = (this.widget.properties.dataTable?.elements || []);
-            measurements.forEach(measurement => this.addMeasurement(measurement));
+            measurements.forEach(measurement => this.addMeasurement(measurement, true));
 
             if (measurements.length === 0) {
                 this.addNewMeasurement();
             }
+            this.numReady++;
+            this.setReady();
         });
     }
 
@@ -169,7 +179,7 @@ export class DataTableEditDialogComponent implements OnInit {
         return element.get('warning') as FormGroup;
     }
 
-    addMeasurement(measurement: DataTableElementModel | undefined) {
+    addMeasurement(measurement: DataTableElementModel | undefined, init: boolean = false) {
         const newGroup = this.fb.group({
             id: [undefined, Validators.required],
             name: [undefined, Validators.required],
@@ -179,6 +189,7 @@ export class DataTableEditDialogComponent implements OnInit {
             exportValuePath: [undefined],
             exportValueName: [undefined],
             exportCreatedByWidget: [undefined],
+            exportTagSelection: [undefined],
             unit: [undefined],
             warning: this.fb.group({
                 enabled: [false],
@@ -208,11 +219,32 @@ export class DataTableEditDialogComponent implements OnInit {
             .subscribe(elementType => this.enableDisableElementDevicePipelineFields(newGroup, elementType));
 
         newGroup.get('elementDetails')?.get('device')?.get('aspectId')?.valueChanges
-            .subscribe(aspectId => aspectId !== null
-                ? this.dataTableHelperService.preloadMeasuringFunctionsOfAspect(aspectId).subscribe() : null);
+            .subscribe(aspectId => {
+                if (aspectId !== null) {
+                    if (init) {
+                        this.numReadyNeeded++;
+                    }
+                    this.dataTableHelperService.preloadMeasuringFunctionsOfAspect(aspectId).subscribe(() => {
+                        if (init) {
+                            this.numReady++;
+                            this.setReady();
+                        }
+                    });
+                }
+            });
 
         newGroup.get('elementDetails')?.get('device')?.get('functionId')?.valueChanges
-            .subscribe(() => this.onFunctionSelected(newGroup));
+            .subscribe(() => {
+                if (init) {
+                    this.numReadyNeeded++;
+                }
+                this.onFunctionSelected(newGroup).subscribe(() => {
+                    if (init) {
+                        this.numReady++;
+                        this.setReady();
+                    }
+                });
+            });
 
         newGroup.get('elementDetails')?.get('device')?.get('serviceId')?.valueChanges
             .subscribe(() => this.onServiceSelected(newGroup));
@@ -251,6 +283,10 @@ export class DataTableEditDialogComponent implements OnInit {
                 warnGroup.get('lowerBoundary')?.enable();
                 warnGroup.get('upperBoundary')?.enable();
             }
+        });
+
+        newGroup.get('exportId')?.valueChanges.subscribe(exportId => {
+            this.dataTableHelperService.preloadExportTags(exportId).subscribe();
         });
 
         if (measurement !== undefined) {
@@ -563,13 +599,21 @@ export class DataTableEditDialogComponent implements OnInit {
         this.addNewMeasurement();
         const newIndex = this.getElements().length - 1;
         this.getElement(newIndex).patchValue(this.getElement(index).value);
-        this.getElement(newIndex).patchValue({id: uuid()});
+        this.getElement(newIndex).patchValue({
+            id: uuid(),
+            exportValuePath: this.getElement(index).get('exportValuePath')?.value
+        });
         this.step = newIndex;
     }
 
     runChangeDetection() {
         this.cdref.detectChanges();
     }
+
+    getOperatorViewValue(operator: PipelineOperatorModel): string {
+        return operator.name + ' (' + operator.id + ')';
+    }
+
 
     private getSelectedService(element: AbstractControl): DeviceTypeServiceModel | undefined {
         const serviceId = element.get('elementDetails')?.get('device')?.get('serviceId')?.value;
@@ -857,5 +901,32 @@ export class DataTableEditDialogComponent implements OnInit {
             }
         });
         return observables;
+    }
+
+    private setReady() {
+        this.ready = this.numReady === this.numReadyNeeded;
+    }
+
+    getTags(tab: AbstractControl): Map<string, { value: string, parent: string }[]> {
+        const expId = tab.get('exportId')?.value;
+        if (expId === undefined) {
+            return new Map();
+        }
+        return this.dataTableHelperService.getExportTags(expId);
+    }
+
+    getTagOptionDisabledFunction(tab: AbstractControl): ((option: { value: string, parent: string }) => boolean) {
+        return ((option: { value: string, parent: string }) => {
+            const selection = tab.get('exportTagSelection')?.value as string[];
+            if (selection === null || selection === undefined || Object.keys(selection).length === 0) {
+                return false;
+            }
+            const existing = selection.find(s => s.startsWith(option.parent) && this.getTagValue(option) !== s);
+            return existing !== undefined;
+        });
+    }
+
+    getTagValue(a: { value: string, parent: string }): string {
+        return a.parent + '!' + a.value;
     }
 }
