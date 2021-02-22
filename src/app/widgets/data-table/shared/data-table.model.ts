@@ -43,6 +43,8 @@ export interface DataTableElementModel {
     exportValueName: string;
     exportCreatedByWidget: boolean;
     exportTagSelection?: string[];
+    groupTime?: string | null;
+    groupType?: string | null;
     unit?: string;
     warning?: DataTableElementWarningModel;
     elementDetails: {
@@ -60,12 +62,17 @@ export interface DataTableElementModel {
             pipelineId: string;
             operatorId: string;
         },
+        import?: {
+            typeId: string;
+            instanceId: string;
+        },
     };
 }
 
 export enum DataTableElementTypesEnum {
     DEVICE,
     PIPELINE,
+    IMPORT,
 }
 
 export interface DataTableElementWarningModel {
@@ -79,6 +86,7 @@ export enum ExportValueTypes {
     FLOAT = 'float',
     STRING = 'string',
     BOOLEAN = 'bool',
+    STRING_JSON = 'string_json',
 }
 
 export enum DataTableOrderEnum {

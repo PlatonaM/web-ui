@@ -17,10 +17,8 @@
 import {Injectable} from '@angular/core';
 import {Observable} from 'rxjs';
 import {environment} from '../../../environments/environment';
-import {LastValuesRequestElementModel, TimeValuePairModel} from './export-data.model';
+import {LastValuesRequestElementModel, QueriesRequestElementModel, TimeValuePairModel} from './export-data.model';
 import {HttpClient} from '@angular/common/http';
-import {ChartsExportModel} from "../charts/export/shared/charts-export.model";
-import {ChartsExportRequestPayloadModel} from "../charts/export/shared/charts-export-request-payload.model";
 
 @Injectable({
     providedIn: 'root'
@@ -34,11 +32,11 @@ export class ExportDataService {
         return this.http.post<TimeValuePairModel[]>(environment.influxAPIURL + '/v2/last-values', requestElements);
     }
 
-    query(payload: ChartsExportRequestPayloadModel, include_empty_columns = true): Observable<ChartsExportModel> {
-        let url = environment.influxAPIURL + '/queries';
-        if (include_empty_columns) {
-            url += '?include_empty_columns=true';
-        }
-        return this.http.post<ChartsExportModel>(url, payload);
+    query(query: QueriesRequestElementModel[]): Observable<any[][][]> {
+        return this.http.post<any[][][]>(environment.influxAPIURL + '/v2/queries?format=per_query', query);
+    }
+
+    queryAsTable(query: QueriesRequestElementModel[]): Observable<any[][] | null> {
+        return this.http.post<any[][] | null>(environment.influxAPIURL + '/v2/queries?format=table', query);
     }
 }

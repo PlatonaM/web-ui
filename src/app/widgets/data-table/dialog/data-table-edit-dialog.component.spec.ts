@@ -139,6 +139,7 @@ describe('DataTableEditDialogComponent', () => {
         dataTableHelperServiceSpy.getServiceValues.and.returnValue([]);
         dataTableHelperServiceSpy.preloadExportTags.and.returnValue(of(new Map()));
         dataTableHelperServiceSpy.getExportTags.and.returnValue(of(new Map()));
+        dataTableHelperServiceSpy.preloadFullImportType.and.returnValue(of(undefined));
 
 
         processSchedulerServiceSpy.createSchedule.and.returnValue(of(null));
@@ -298,6 +299,8 @@ describe('DataTableEditDialogComponent', () => {
                                 exportValueName: 'Time',
                                 exportCreatedByWidget: true,
                                 exportTagSelection: null,
+                                groupType: null,
+                                groupTime: null,
                                 unit: null,
                                 elementDetails: {
                                     elementType: 0,
@@ -313,7 +316,11 @@ describe('DataTableEditDialogComponent', () => {
                                     pipeline: {
                                         pipelineId: null,
                                         operatorId: null
-                                    }
+                                    },
+                                    import: {
+                                        typeId: null,
+                                        instanceId: null,
+                                    },
                                 }
                             }
                         ],
@@ -402,6 +409,7 @@ describe('DataTableEditDialogComponent', () => {
         elementOld.id = '';
         elementNew.id = '';
         delete elementOld.elementDetails.pipeline; // does not get copied, since device selected
+        delete elementOld.elementDetails.import; // does not get copied, since device selected
         expect(elementOld).toEqual(elementNew);
 
 
